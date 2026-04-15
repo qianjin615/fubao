@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>福宝 — 在韩华人AI生活助手</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+
+  :root {
+    --green: #1a9e6e;
+    --green-light: #e8f7f1;
+    --green-dark: #0d6b4a;
+    --bg: #f5f5f0;
+    --card: #ffffff;
+    --text: #1a1a1a;
+    --text-muted: #888;
+    --border: #e8e8e3;
+    --user-bubble: #1a9e6e;
+    --bot-bubble: #ffffff;
+    --radius: 18px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans SC', sans-serif;
+    background: var(--bg);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+
+  /* Header bar */
+  .topbar {
+    width: 100%;
+    max-width: 760px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 0 12px;
+  }
+
+  .logo-circle {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--green);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+
+  .logo-text h1 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 0.05em;
+  }
+
+  .logo-text p {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 2px;
+    font-weight: 300;
+  }
+
+  .badge {
+    margin-left: auto;
+    font-size: 11px;
+    background: var(--green-light);
+    color: var(--green-dark);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-weight: 500;
+  }
+
+  /* Chat window */
+  .chat-window {
+    width: 100%;
+    max-width: 760px;
+    background: var(--card);
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    height: 560px;
+    overflow: hidden;
+  }
+
+  #messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    scroll-behavior: smooth;
+  }
+
+  #messages::-webkit-scrollbar { width: 4px; }
+  #messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  /* Message bubbles */
+  .msg { display: flex; gap: 10px; max-width: 80%; }
+  .msg.user { align-self: flex-end; flex-direction: row-reverse; }
+
+  .msg-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--green-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .bubble {
+    padding: 12px 16px;
+    border-radius: 4px 18px 18px 18px;
+    font-size: 14px;
+    line-height: 1.75;
+    color: var(--text);
+    background: var(--bot-bubble);
+    border: 1px solid var(--border);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .msg.user .bubble {
+    background: var(--user-bubble);
+    color: #fff;
+    border-color: var(--user-bubble);
+    border-radius: 18px 4px 18px 18px;
+  }
+
+  .refs {
+    margin-top: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .ref-tag {
+    font-size: 11px;
+    background: var(--green-light);
+    color: var(--green-dark);
+    padding: 3px 8px;
+    border-radius: 10px;
+    font-weight: 400;
+  }
+
+  /* Typing indicator */
+  .typing-dots {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    padding: 4px 0;
+  }
+
+  .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #bbb;
+    animation: pulse 1.2s infinite;
+  }
+
+  .dot:nth-child(2) { animation-delay: 0.2s; }
+  .dot:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes pulse {
+    0%, 80%, 100% { transform: scale(0.7); opacity: 0.4; }
+    40% { transform: scale(1); opacity: 1; }
+  }
+
+  /* Quick chips */
+  .chips-row {
+    padding: 4px 20px 10px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    border-top: 1px solid var(--border);
+  }
+
+  .chip {
+    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text-muted);
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .chip:hover {
+    background: var(--green-light);
+    color: var(--green-dark);
+    border-color: var(--green);
+  }
+
+  /* Input area */
+  .input-area {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    background: var(--card);
+  }
+
+  #user-input {
+    flex: 1;
+    border: 1.5px solid var(--border);
+    border-radius: 22px;
+    padding: 10px 18px;
+    font-size: 14px;
+    font-family: inherit;
+    resize: none;
+    outline: none;
+    max-height: 120px;
+    line-height: 1.5;
+    background: var(--bg);
+    color: var(--text);
+    transition: border-color 0.2s;
+  }
+
+  #user-input:focus { border-color: var(--green); }
+  #user-input::placeholder { color: #bbb; }
+
+  #send-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--green);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.2s, transform 0.1s;
+  }
+
+  #send-btn:hover { background: var(--green-dark); }
+  #send-btn:active { transform: scale(0.94); }
+
+  #send-btn svg { width: 17px; height: 17px; fill: white; }
+
+  /* Config notice */
+  .config-bar {
+    width: 100%;
+    max-width: 760px;
+    font-size: 12px;
+    color: #9a6800;
+    background: #fff8e1;
+    border: 1px solid #ffe082;
+    border-radius: 10px;
+    padding: 8px 14px;
+    margin-top: 12px;
+    line-height: 1.6;
+  }
+
+  .config-bar strong { font-weight: 500; }
+
+  /* Error bubble */
+  .error-bubble {
+    background: #fff1f1;
+    border-color: #ffc0c0;
+    color: #a00;
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo-circle">🐼</div>
+  <div class="logo-text">
+    <h1>福宝</h1>
+    <p>在韩华人 AI 生活助手</p>
+  </div>
+  <div class="badge">知识库驱动</div>
+</div>
+
+<div class="chat-window">
+  <div id="messages">
+    <div class="msg bot">
+      <div class="msg-icon">🐼</div>
+      <div>
+        <div class="bubble">你好！我是福宝 🌿
+
+我是专为在韩华人设计的AI助手，可以帮你解答签证、出入境、生活、创业等各类问题。
+
+我的回答来自整理好的知识库，不会随意猜测——如果我不确定，我会直接告诉你。
+
+请问有什么可以帮你？</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="chips-row">
+    <button class="chip" onclick="sendQ('韩国D8投资签证需要什么条件？')">D8投资签证</button>
+    <button class="chip" onclick="sendQ('F2签证如何续签？')">F2签证续签</button>
+    <button class="chip" onclick="sendQ('D9签证申请需要哪些材料？')">D9签证材料</button>
+    <button class="chip" onclick="sendQ('如何申请韩国永久居留（F5）？')">F5永居申请</button>
+  </div>
+
+  <div class="input-area">
+    <textarea id="user-input" rows="1" placeholder="向福宝提问…" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+    <button id="send-btn" onclick="handleSend()">
+      <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
+    </button>
+  </div>
+</div>
+
+<div class="config-bar">
+  ⚙️ <strong>最后一步：</strong>用文本编辑器打开此文件，找到 <code>YOUR_API_KEY</code>，替换为你的火山方舟 API Key，保存后即可真实连接知识库。
+</div>
+
+<script>
+// ============================================================
+// 配置区域 — 填入你的火山方舟参数
+// ============================================================
+const CONFIG = {
+  apiKey: '39d88070-6875-40b4-9748-a47bcdf8b0ad',           // ← 填入你的火山方舟 API Key
+  accountId: '2112771076',
+  serviceId: 'kb-service-dfeda399e547dc81',
+  endpoint: 'https://api-knowledgebase.mlp.cn-beijing.volces.com'
+};
+// ============================================================
+
+const messagesEl = document.getElementById('messages');
+const inputEl = document.getElementById('user-input');
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    handleSend();
+  }
+}
+
+function sendQ(text) {
+  inputEl.value = text;
+  handleSend();
+}
+
+function appendMsg(role, text, refs, isError) {
+  const wrap = document.createElement('div');
+  wrap.className = 'msg ' + role;
+
+  if (role === 'bot') {
+    const icon = document.createElement('div');
+    icon.className = 'msg-icon';
+    icon.textContent = '🐼';
+    wrap.appendChild(icon);
+  }
+
+  const inner = document.createElement('div');
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble' + (isError ? ' error-bubble' : '');
+  bubble.textContent = text;
+  inner.appendChild(bubble);
+
+  if (refs && refs.length > 0) {
+    const refsDiv = document.createElement('div');
+    refsDiv.className = 'refs';
+    refs.forEach(r => {
+      const tag = document.createElement('span');
+      tag.className = 'ref-tag';
+      tag.textContent = r;
+      refsDiv.appendChild(tag);
+    });
+    inner.appendChild(refsDiv);
+  }
+
+  wrap.appendChild(inner);
+  messagesEl.appendChild(wrap);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+  return wrap;
+}
+
+function showTyping() {
+  const wrap = document.createElement('div');
+  wrap.className = 'msg bot';
+  wrap.id = 'typing-indicator';
+  wrap.innerHTML = '<div class="msg-icon">🐼</div><div><div class="bubble"><div class="typing-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div></div>';
+  messagesEl.appendChild(wrap);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function removeTyping() {
+  const t = document.getElementById('typing-indicator');
+  if (t) t.remove();
+}
+
+async function callFubaoAPI(question) {
+  // 如果未配置，使用演示模式
+  if (CONFIG.apiKey === 'YOUR_API_KEY') {
+    await new Promise(r => setTimeout(r, 1200));
+    const demos = [
+      { q: 'D8', text: 'D8投资签证（外国人投资签证）主要条件：\n\n① 最低投资额：1亿韩元（约53万人民币）\n② 需在韩国设立合法注册的法人公司\n③ 投资资金来源合法，需提供银行转账证明\n④ 持股比例需达到20%以上\n\n建议投资5亿韩元以上，审批更顺利，后续可转换F2及F5永居签证。', refs: ['D8签证办理流程.pdf', 'D7投资签证笔记整理.pdf'] },
+      { q: 'F2', text: 'F2签证续签所需材料：\n\n① 护照原件及复印件\n② 外国人登录证\n③ 申请表（法务部官网下载）\n④ 收入证明或财力证明\n⑤ 住址证明（水电费单或租赁合同）\n\n建议在签证到期前3个月办理，前往管辖地区出入境管理事务所预约。', refs: ['签证笔记.pdf'] },
+      { q: 'D9', text: 'D9贸易经营签证申请材料：\n\n① 事业计划书（详细说明经营内容）\n② 公司注册证明\n③ 资金证明\n④ 法人印鉴证明\n⑤ 护照及外国人登录证\n\n具体材料要求以韩国法务部最新公告为准。', refs: ['D9비자.pdf'] },
+      { q: 'F5', text: 'F5永久居留申请（投资类）的基本条件：\n\n① D8签证持有者投资5亿韩元以上，且雇用5名以上韩国国籍员工\n② 公司合法经营6个月以上\n③ 缴纳四大保险及所得税记录完整\n④ 无犯罪记录\n\n满足条件后可直接申请F5，无需先获得F2。', refs: ['D8换F5的条件.pdf'] },
+    ];
+    for (const d of demos) {
+      if (question.includes(d.q)) return d;
+    }
+    return { text: '这个问题需要查询知识库。请将代码中的 API Key 替换为你的火山方舟真实参数后，即可获得准确回答。', refs: [] };
+  }
+
+  // 真实 API 调用（火山方舟知识库问答接口）
+  try {
+    const res = await fetch(`${CONFIG.endpoint}/api/knowledge/collection/query`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${CONFIG.apiKey}`,
+        'X-Account-Id': CONFIG.accountId,
+      },
+      body: JSON.stringify({
+        service_id: CONFIG.serviceId,
+        query: question,
+        messages: [{ role: 'user', content: question }],
+      })
+    });
+
+    if (!res.ok) throw new Error('API 请求失败：' + res.status);
+    const data = await res.json();
+
+    const answer = data?.answer || data?.result || '暂时无法获取回答，请稍后重试。';
+    const refs = (data?.references || []).map(r => r.doc_name || r.title || '').filter(Boolean);
+    return { text: answer, refs };
+  } catch (err) {
+    return { text: '连接知识库失败：' + err.message + '\n\n请检查 API Key 和网络连接。', refs: [], isError: true };
+  }
+}
+
+async function handleSend() {
+  const q = inputEl.value.trim();
+  if (!q) return;
+
+  inputEl.value = '';
+  inputEl.style.height = 'auto';
+  appendMsg('user', q);
+  showTyping();
+
+  const result = await callFubaoAPI(q);
+  removeTyping();
+  appendMsg('bot', result.text, result.refs, result.isError);
+}
+</script>
+</body>
+</html>
