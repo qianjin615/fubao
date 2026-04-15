@@ -329,16 +329,9 @@
 </div>
 
 <script>
-// ============================================================
-// 配置区域 — 填入你的火山方舟参数
-// ============================================================
 const CONFIG = {
-  apiKey: '39d88070-6875-40b4-9748-a47bcdf8b0ad',           // 火山方舟 API Key
-  accountId: 'YOUR_ACCOUNT_ID',    // 账号 ID（如 2112771076）
-  serviceId: 'YOUR_SERVICE_ID',    // 服务调用 ID（创建服务后获得）
-  endpoint: 'https://api-knowledgebase.mlp.cn-beijing.volces.com'
+  apiEndpoint: '/api/chat'
 };
-// ============================================================
 
 const messagesEl = document.getElementById('messages');
 const inputEl = document.getElementById('user-input');
@@ -410,45 +403,19 @@ function removeTyping() {
 }
 
 async function callFubaoAPI(question) {
-  // 如果未配置，使用演示模式
-  if (CONFIG.apiKey === 'YOUR_API_KEY') {
-    await new Promise(r => setTimeout(r, 1200));
-    const demos = [
-      { q: 'D8', text: 'D8投资签证（外国人投资签证）主要条件：\n\n① 最低投资额：1亿韩元（约53万人民币）\n② 需在韩国设立合法注册的法人公司\n③ 投资资金来源合法，需提供银行转账证明\n④ 持股比例需达到20%以上\n\n建议投资5亿韩元以上，审批更顺利，后续可转换F2及F5永居签证。', refs: ['D8签证办理流程.pdf', 'D7投资签证笔记整理.pdf'] },
-      { q: 'F2', text: 'F2签证续签所需材料：\n\n① 护照原件及复印件\n② 外国人登录证\n③ 申请表（法务部官网下载）\n④ 收入证明或财力证明\n⑤ 住址证明（水电费单或租赁合同）\n\n建议在签证到期前3个月办理，前往管辖地区出入境管理事务所预约。', refs: ['签证笔记.pdf'] },
-      { q: 'D9', text: 'D9贸易经营签证申请材料：\n\n① 事业计划书（详细说明经营内容）\n② 公司注册证明\n③ 资金证明\n④ 法人印鉴证明\n⑤ 护照及外国人登录证\n\n具体材料要求以韩国法务部最新公告为准。', refs: ['D9비자.pdf'] },
-      { q: 'F5', text: 'F5永久居留申请（投资类）的基本条件：\n\n① D8签证持有者投资5亿韩元以上，且雇用5名以上韩国国籍员工\n② 公司合法经营6个月以上\n③ 缴纳四大保险及所得税记录完整\n④ 无犯罪记录\n\n满足条件后可直接申请F5，无需先获得F2。', refs: ['D8换F5的条件.pdf'] },
-    ];
-    for (const d of demos) {
-      if (question.includes(d.q)) return d;
-    }
-    return { text: '这个问题需要查询知识库。请将代码中的 API Key 替换为你的火山方舟真实参数后，即可获得准确回答。', refs: [] };
-  }
-
-  // 真实 API 调用（火山方舟知识库问答接口）
   try {
-    const res = await fetch(`${CONFIG.endpoint}/api/knowledge/collection/query`, {
+    const res = await fetch(CONFIG.apiEndpoint, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${CONFIG.apiKey}`,
-        'X-Account-Id': CONFIG.accountId,
-      },
-      body: JSON.stringify({
-        service_id: CONFIG.serviceId,
-        query: question,
-        messages: [{ role: 'user', content: question }],
-      })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: question })
     });
-
-    if (!res.ok) throw new Error('API 请求失败：' + res.status);
+    if (!res.ok) throw new Error('请求失败：' + res.status);
     const data = await res.json();
-
-    const answer = data?.answer || data?.result || '暂时无法获取回答，请稍后重试。';
+    const answer = data?.answer || data?.result || data?.choices?.[0]?.message?.content || '暂时无法获取回答，请稍后重试。';
     const refs = (data?.references || []).map(r => r.doc_name || r.title || '').filter(Boolean);
     return { text: answer, refs };
   } catch (err) {
-    return { text: '连接知识库失败：' + err.message + '\n\n请检查 API Key 和网络连接。', refs: [], isError: true };
+    return { text: '连接失败：' + err.message, refs: [], isError: true };
   }
 }
 
