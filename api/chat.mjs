@@ -1,4 +1,4 @@
-﻿export const config = { runtime: 'edge' };
+export const config = { runtime: 'edge' };
 
 async function hmacSHA256(key, data) {
   const encoder = new TextEncoder();
@@ -60,13 +60,16 @@ export default async function handler(req) {
 
   const bodyHash = await sha256Hash(body);
 
-  const canonicalHeaders = content-type:application/json\nhost:System.Management.Automation.Internal.Host.InternalHost\nx-account-id:\nx-date:\n;
+  const canonicalHeaders =
+    'content-type:application/json\nhost:' + host + '\nx-account-id:' + accountId + '\nx-date:' + timeStr + '\n';
   const signedHeaders = 'content-type;host;x-account-id;x-date';
-  const canonicalRequest = POST\n\n\n\n;
+  const canonicalRequest =
+    'POST\n' + path + '\n\n' + canonicalHeaders + signedHeaders + '\n' + bodyHash;
 
-  const credentialScope = ${dateStr}///request;
+  const credentialScope = dateStr + '/' + region + '/' + service + '/request';
   const canonicalRequestHash = await sha256Hash(canonicalRequest);
-  const stringToSign = HMAC-SHA256\n\n\n;
+  const stringToSign =
+    'HMAC-SHA256\n' + timeStr + '\n' + credentialScope + '\n' + canonicalRequestHash;
 
   const signingKey1 = await hmacSHA256(sk, dateStr);
   const signingKey2 = await hmacSHA256(signingKey1, region);
@@ -74,10 +77,12 @@ export default async function handler(req) {
   const signingKey4 = await hmacSHA256(signingKey3, 'request');
   const signature = toHex(await hmacSHA256(signingKey4, stringToSign));
 
-  const authorization = HMAC-SHA256 Credential=/, SignedHeaders=, Signature=;
+  const authorization =
+    'HMAC-SHA256 Credential=' + ak + '/' + credentialScope +
+    ', SignedHeaders=' + signedHeaders + ', Signature=' + signature;
 
   try {
-    const response = await fetch(https://System.Management.Automation.Internal.Host.InternalHost, {
+    const response = await fetch('https://' + host + path, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
