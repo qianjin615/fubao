@@ -95,6 +95,7 @@ export default async function handler(req) {
     });
 
     const data = await response.json();
+    console.log('火山方舟返回数据：', JSON.stringify(data));
     const answer = data?.generated_answer || data?.choices?.[0]?.message?.content || '暂时无法获取回答，请稍后重试。';
     const refs = (data?.references || []).map(r => r.doc_name || r.title || '').filter(Boolean);
 
