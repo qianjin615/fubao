@@ -9,7 +9,7 @@
  *   ACCOUNT_ID   — 账号 ID
  */
 
-exports.handler = async function (req, res) {
+module.exports = async function handler(req, res) {
   // ── CORS ──────────────────────────────────────────────────────────
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
