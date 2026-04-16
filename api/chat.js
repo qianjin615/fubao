@@ -1,3 +1,5 @@
+export const config = { runtime: 'nodejs' };
+
 /**
  * 福宝AI - 火山方舟知识库 Serverless API
  * 使用 SignerV4 签名认证（与 backend.py 完全一致）
