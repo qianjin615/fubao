@@ -38,6 +38,16 @@ async function buildAuthzHeader(method, path, host, ak, sk, bodyStr) {
   const bodyHash = await sha256Hex(bodyStr);
   const bodyLen  = new TextEncoder().encode(bodyStr).length;
 
+  // 调试签名中间值
+  console.log('[签名] AK前4位：' + (ak ? ak.substring(0,4) : 'undefined'));
+  console.log('[签名] SK前4位：' + (sk ? sk.substring(0,4) : 'undefined'));
+  console.log('[签名] dateStr：' + dateStr);
+  console.log('[签名] xDate：' + xDate);
+  console.log('[签名] bodyHash：' + bodyHash);
+  console.log('[签名] bodyLen：' + bodyLen);
+  console.log('[签名] host：' + host);
+  console.log('[签名] path：' + path);
+
   // Canonical Headers（与 backend.py volcengine.auth.SignerV4 一致）
   const canonicalHeaders =
     'content-type:application/json\n' +
@@ -105,10 +115,9 @@ async function callFubao(query) {
   // 1. chat 接口（与 backend.py 逻辑完全一致）
   try {
     const bodyStr = JSON.stringify(chatPayload);
-    // SK 在 backend.py 里存的是 base64 编码，这里同步解码
-    const skRaw = Buffer.from(process.env.HUOSHAN_SK || '', 'base64').toString('utf8');
+    // SK 直接使用原始字符串
     const auth  = await buildAuthzHeader('POST', PATH, HOST,
-      process.env.HUOSHAN_AK, skRaw, bodyStr);
+      process.env.HUOSHAN_AK, process.env.HUOSHAN_SK || '', bodyStr);
 
     console.log('[FUBAO] chat 请求发送');
 
@@ -155,10 +164,9 @@ async function callFubao(query) {
   if (references.length === 0) {
     try {
       const bodyStr2 = JSON.stringify(searchPayload);
-      const skRaw2   = Buffer.from(process.env.HUOSHAN_SK || '', 'base64').toString('utf8');
       const auth2    = await buildAuthzHeader('POST',
         '/api/knowledge/collection/search_knowledge',
-        HOST, process.env.HUOSHAN_AK, skRaw2, bodyStr2);
+        HOST, process.env.HUOSHAN_AK, process.env.HUOSHAN_SK || '', bodyStr2);
 
       const resp2 = await fetch(
         'https://' + HOST + '/api/knowledge/collection/search_knowledge',
