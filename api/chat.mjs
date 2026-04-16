@@ -1,6 +1,6 @@
 export const config = { runtime: 'edge' };
 
-// 签名工具（与 backend.py volcengine.auth.SignerV4 行为一致）
+// 签名工具（对齐 volcengine Python SDK SignerV4）
 async function hmacSHA256(key, data) {
   const encoder = new TextEncoder();
   const keyData = typeof key === 'string' ? encoder.encode(key) : key;
@@ -34,26 +34,21 @@ async function buildAuthzHeader(method, path, host, ak, sk, bodyStr) {
   const REGION   = 'cn-beijing';
   const now      = new Date();
   const dateStr  = now.toISOString().slice(0, 10).replace(/-/g, '');
+  // x-date 格式: 20260416T051057Z
   const xDate    = now.toISOString().replace(/[:-]/g, '').slice(0, 15) + 'Z';
   const bodyHash = await sha256Hex(bodyStr);
   const bodyLen  = new TextEncoder().encode(bodyStr).length;
+  const bodyLenStr = String(bodyLen);
 
-  // 调试签名中间值
-  console.log('[签名] AK前4位：' + (ak ? ak.substring(0,4) : 'undefined'));
-  console.log('[签名] SK前4位：' + (sk ? sk.substring(0,4) : 'undefined'));
-  console.log('[签名] dateStr：' + dateStr);
-  console.log('[签名] xDate：' + xDate);
-  console.log('[签名] bodyHash：' + bodyHash);
-  console.log('[签名] bodyLen：' + bodyLen);
-  console.log('[签名] host：' + host);
-  console.log('[签名] path：' + path);
-
-  // Canonical Headers（与 backend.py volcengine.auth.SignerV4 一致）
+  // Canonical Headers（严格对齐 Python SDK volcengine.auth.SignerV4）
+  // 顺序: content-type, content-length, host, x-content-sha256, x-date
   const canonicalHeaders =
     'content-type:application/json\n' +
+    'content-length:' + bodyLenStr + '\n' +
     'host:' + host + '\n' +
-    'content-length:' + bodyLen + '\n';
-  const signedHeaders = 'content-type;host;content-length';
+    'x-content-sha256:' + bodyHash + '\n' +
+    'x-date:' + xDate + '\n';
+  const signedHeaders = 'content-type;host;x-content-sha256;x-date';
 
   const canonicalRequest = [
     method,
@@ -64,6 +59,10 @@ async function buildAuthzHeader(method, path, host, ak, sk, bodyStr) {
     bodyHash,
   ].join('\n');
 
+  // 调试输出
+  console.log('[签名] bodyLenStr=' + bodyLenStr + ' bodyHash=' + bodyHash);
+  console.log('[签名] canonicalRequest=\n' + canonicalRequest);
+
   const credentialScope = dateStr + '/' + REGION + '/' + SERVICE + '/request';
   const stringToSign = [
     'HMAC-SHA256',
@@ -72,14 +71,19 @@ async function buildAuthzHeader(method, path, host, ak, sk, bodyStr) {
     await sha256Hex(canonicalRequest),
   ].join('\n');
 
+  console.log('[签名] stringToSign=\n' + stringToSign);
+
   const signingKey = await getSigningKey(sk, dateStr, REGION, SERVICE);
   const signature  = toHex(await hmacSHA256(signingKey, stringToSign));
+
+  console.log('[签名] signature=' + signature);
 
   return {
     authorization: 'HMAC-SHA256 Credential=' + ak + '/' + credentialScope +
                    ', SignedHeaders=' + signedHeaders + ', Signature=' + signature,
-    'x-date':       xDate,
-    'content-length': bodyLen,
+    'x-date':          xDate,
+    'x-content-sha256': bodyHash,
+    'content-length':  bodyLenStr,
   };
 }
 
@@ -112,29 +116,27 @@ async function callFubao(query) {
   let answer = '';
   let references = [];
 
-  // 1. chat 接口（与 backend.py 逻辑完全一致）
+  // 1. chat 接口（对齐 backend.py 验证成功的路径）
   try {
     const bodyStr = JSON.stringify(chatPayload);
-    // SK 直接使用原始字符串
-    const auth  = await buildAuthzHeader('POST', PATH, HOST,
+    const auth = await buildAuthzHeader('POST', PATH, HOST,
       process.env.HUOSHAN_AK, process.env.HUOSHAN_SK || '', bodyStr);
-
-    console.log('[FUBAO] chat 请求发送');
 
     const resp = await fetch('https://' + HOST + PATH, {
       method: 'POST',
       headers: {
-        'Content-Type':  'application/json',
-        'Host':          HOST,
-        'X-Date':       auth['x-date'],
-        'Authorization': auth.authorization,
-        'Content-Length': auth['content-length'],
+        'Content-Type':    'application/json',
+        'Host':            HOST,
+        'X-Date':          auth['x-date'],
+        'X-Content-Sha256': auth['x-content-sha256'],
+        'Content-Length':   auth['content-length'],
+        'Authorization':    auth.authorization,
       },
       body: bodyStr,
     });
 
     const data = await resp.json();
-    console.log('火山方舟返回数据：', JSON.stringify(data));
+    console.log('火山方舟返回数据：', JSON.stringify(data).slice(0, 500));
 
     if (data.code === 0) {
       const d    = data.data || {};
@@ -164,7 +166,7 @@ async function callFubao(query) {
   if (references.length === 0) {
     try {
       const bodyStr2 = JSON.stringify(searchPayload);
-      const auth2    = await buildAuthzHeader('POST',
+      const auth2 = await buildAuthzHeader('POST',
         '/api/knowledge/collection/search_knowledge',
         HOST, process.env.HUOSHAN_AK, process.env.HUOSHAN_SK || '', bodyStr2);
 
@@ -173,11 +175,12 @@ async function callFubao(query) {
         {
           method: 'POST',
           headers: {
-            'Content-Type':   'application/json',
-            'Host':           HOST,
-            'X-Date':         auth2['x-date'],
-            'Authorization':  auth2.authorization,
-            'Content-Length': auth2['content-length'],
+            'Content-Type':    'application/json',
+            'Host':            HOST,
+            'X-Date':          auth2['x-date'],
+            'X-Content-Sha256': auth2['x-content-sha256'],
+            'Content-Length':   auth2['content-length'],
+            'Authorization':   auth2.authorization,
           },
           body: bodyStr2,
         }
